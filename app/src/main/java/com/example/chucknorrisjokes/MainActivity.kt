@@ -1,12 +1,13 @@
 package com.example.chucknorrisjokes
 
+import android.R.attr.data
 import android.content.Context
-import android.graphics.drawable.BitmapDrawable
 import android.net.ConnectivityManager
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
-import android.text.Html
+import android.support.v7.widget.LinearLayoutManager
 import android.view.View
+import android.widget.LinearLayout
 import android.widget.Toast
 import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.activity_main.*
@@ -14,9 +15,16 @@ import okhttp3.*
 import org.json.JSONObject
 import java.io.IOException
 import kotlin.random.Random
+import android.R.attr.data
+import android.graphics.drawable.BitmapDrawable
+import kotlinx.android.synthetic.main.item_layout.*
 
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(){
+
+    val jokes = ArrayList<Joke>()
+
+    var txt: String = ""
 
     val URL = "https://api.icndb.com/jokes/random"
     var okHttpClient: OkHttpClient = OkHttpClient()
@@ -33,10 +41,29 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        recycler_view.layoutManager = LinearLayoutManager(this, LinearLayout.VERTICAL, false)
+
+        randomImage()
+        randomJoke()
+
         btn_get_joke.setOnClickListener {
-            randomJoke()
+            for (i in 0..4) {
+                randomJoke()
+            }
+            randomImage()
             checkInternetConnection()
         }
+
+        btn_clear.setOnClickListener {
+           clear()
+        }
+    }
+
+    fun clear() {
+        jokes.removeAll(jokes)
+        val adapter = JokeAdapter(jokes)
+        recycler_view.adapter = adapter
+        //jokesAdapter.notifyDataSetChanged()
     }
 
     private fun randomImage() {
@@ -49,42 +76,46 @@ class MainActivity : AppCompatActivity() {
         runOnUiThread {
             progress_bar.visibility = View.VISIBLE
         }
+
         val request: Request = Request.Builder().url(URL).build()
+
         okHttpClient.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
 
             }
 
             override fun onResponse(call: Call, response: Response) {
-                val json = response?.body()?.string()
-                val txt = (JSONObject(json).getJSONObject("value").get("joke")).toString()
-
+                val json = response.body()?.string()
+                txt = (JSONObject(json).getJSONObject("value").get("joke")).toString()
+                jokes.add(Joke(txt))
                 runOnUiThread {
-                    randomImage()
+                    val adapter = JokeAdapter(jokes)
+
+                    recycler_view.adapter = adapter
+
+                    /* tv_joke.text = Html.fromHtml(txt)*/
                     progress_bar.visibility = View.GONE
-                    tv_joke.text = Html.fromHtml(txt)
                 }
             }
         })
     }
+     /*override fun onSaveInstanceState(outState: Bundle?) {
+         super.onSaveInstanceState(outState)
 
-    override fun onSaveInstanceState(outState: Bundle?) {
-        super.onSaveInstanceState(outState)
+         outState?.run {
+             putString("TEXT", txt)
+             val drawable = iv_chak.drawable as BitmapDrawable
+             val bitmap = drawable.bitmap
+             putParcelable("IMAGE", bitmap)
+         }
+     }
 
-        outState?.run {
-            putString("TEXT", tv_joke.text.toString())
-            val drawable = iv_chak.drawable as BitmapDrawable
-            val bitmap = drawable.bitmap
-            putParcelable("IMAGE", bitmap)
-        }
-    }
+     override fun onRestoreInstanceState(savedInstanceState: Bundle?) {
+         super.onRestoreInstanceState(savedInstanceState)
 
-    override fun onRestoreInstanceState(savedInstanceState: Bundle?) {
-        super.onRestoreInstanceState(savedInstanceState)
-
-        tv_joke.text = savedInstanceState?.getString("TEXT")
-        iv_chak.setImageBitmap(savedInstanceState?.getParcelable("IMAGE"))
-    }
+         tv_joke.text = savedInstanceState?.getString("TEXT")
+         iv_chak.setImageBitmap(savedInstanceState?.getParcelable("IMAGE"))
+     }*/
 
     fun checkInternetConnection() {
         val cm = baseContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
